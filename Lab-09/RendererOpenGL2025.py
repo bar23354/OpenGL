@@ -15,6 +15,28 @@ height = 540
 
 deltaTime = 0.0
 
+def print_menu():
+    print("\n" + "="*60)
+    print("CONTROLES")
+    print("="*60)
+    print("  Flechas (↑↓←→)  : Mover camara")
+    print("  W/S             : Mover luz Z")
+    print("  A/D             : Mover luz X")
+    print("  Q/E             : Mover luz Y")
+    print("  1               : Normal Shader")
+    print("  2               : Toon Shader")
+    print("  3               : Negative Shader")
+    print("  4               : Magma Shader")
+    print("  7               : Vertex Normal")
+    print("  8               : Fat Shader")
+    print("  9               : Water Shader")
+    print("  0               : Radiation Pulse (Ondas radioactivas)")
+    print("  -               : Nuclear Decay (Desintegracion nuclear)")
+    print("  Z/X             : Disminuir/Aumentar intensidad")
+    print("  F               : Toggle Filled Mode")
+    print("="*60 + "\n")
+
+print_menu()
 
 screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.OPENGL)
 clock = pygame.time.Clock()
@@ -41,9 +63,12 @@ rend.CreateSkybox(skyboxTextures)
 faceModel = Model("models/model.obj")
 faceModel.AddTexture("textures/model.bmp")
 faceModel.AddTexture("textures/lava_cracks.jpg")
-faceModel.position.z = -5
+faceModel.position.z = -10
+faceModel.scale = glm.vec3(2, 2, 2)
 
 rend.scene.append(faceModel)
+
+rend.camera.position.z = -5
 
 isRunning = True
 
@@ -90,6 +115,14 @@ while isRunning:
 
 			if event.key == pygame.K_9:
 				currVertexShader = water_shader
+				rend.SetShaders(currVertexShader, currFragmentShader)
+
+			if event.key == pygame.K_0:
+				currVertexShader = radiation_pulse_shader
+				rend.SetShaders(currVertexShader, currFragmentShader)
+
+			if event.key == pygame.K_MINUS:
+				currVertexShader = nuclear_decay_shader
 				rend.SetShaders(currVertexShader, currFragmentShader)
 
 
