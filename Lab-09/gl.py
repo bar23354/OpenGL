@@ -87,6 +87,7 @@ class Renderer(object):
 
             glUniform1i( glGetUniformLocation(self.activeShader, "tex0"), 0)
             glUniform1i( glGetUniformLocation(self.activeShader, "tex1"), 1)
+            glUniform1i( glGetUniformLocation(self.activeShader, "tex2"), 2)
 
 
 

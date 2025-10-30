@@ -26,12 +26,16 @@ def print_menu():
     print("  1               : Normal Shader")
     print("  2               : Toon Shader")
     print("  3               : Negative Shader")
-    print("  4               : Magma Shader")
-    print("  7               : Vertex Normal")
-    print("  8               : Fat Shader")
-    print("  9               : Water Shader")
-    print("  0               : Radiation Pulse (Ondas radioactivas)")
-    print("  -               : Nuclear Decay (Desintegracion nuclear)")
+    print("  4               : Hologram Shader")
+    print("  5               : Pixelate Shader")
+    print("  6               : Thermal Shader")
+    print("  7               : Twist Vertex Shader")
+    print("  8               : Pulse Vertex Shader")
+    print("  9               : Glitch Vertex Shader")
+    print("  0               : Radiation Pulse Shader")
+    print("  -               : Nuclear Decay Shader")
+    print("  [               : Chromatic Aberration Shader")
+    print("  ]               : Outline Shader")
     print("  Z/X             : Disminuir/Aumentar intensidad")
     print("  F               : Toggle Filled Mode")
     print("="*60 + "\n")
@@ -62,7 +66,8 @@ rend.CreateSkybox(skyboxTextures)
 
 faceModel = Model("models/model.obj")
 faceModel.AddTexture("textures/model.bmp")
-faceModel.AddTexture("textures/lava_cracks.jpg")
+faceModel.AddTexture("textures/radiation.jpg")
+faceModel.AddTexture("textures/uranium.jpg")
 faceModel.position.z = -10
 faceModel.scale = glm.vec3(2, 2, 2)
 
@@ -89,40 +94,69 @@ while isRunning:
 				rend.ToggleFilledMode()
 
 			if event.key == pygame.K_1:
+				currVertexShader = vertex_shader
 				currFragmentShader = fragment_shader
 				rend.SetShaders(currVertexShader, currFragmentShader)
 
 			if event.key == pygame.K_2:
+				currVertexShader = vertex_shader
 				currFragmentShader = toon_shader
 				rend.SetShaders(currVertexShader, currFragmentShader)
 
 			if event.key == pygame.K_3:
+				currVertexShader = vertex_shader
 				currFragmentShader = negative_shader
 				rend.SetShaders(currVertexShader, currFragmentShader)
 
 			if event.key == pygame.K_4:
-				currFragmentShader = magma_shader
+				currVertexShader = vertex_shader
+				currFragmentShader = hologram_shader
+				rend.SetShaders(currVertexShader, currFragmentShader)
+
+			if event.key == pygame.K_5:
+				currVertexShader = vertex_shader
+				currFragmentShader = pixelate_shader
+				rend.SetShaders(currVertexShader, currFragmentShader)
+
+			if event.key == pygame.K_6:
+				currVertexShader = vertex_shader
+				currFragmentShader = thermal_shader
 				rend.SetShaders(currVertexShader, currFragmentShader)
 
 
 			if event.key == pygame.K_7:
-				currVertexShader = vertex_shader
+				currVertexShader = twist_shader
+				currFragmentShader = fragment_shader
 				rend.SetShaders(currVertexShader, currFragmentShader)
 
 			if event.key == pygame.K_8:
-				currVertexShader = fat_shader
+				currVertexShader = pulse_shader
+				currFragmentShader = fragment_shader
 				rend.SetShaders(currVertexShader, currFragmentShader)
 
 			if event.key == pygame.K_9:
-				currVertexShader = water_shader
+				currVertexShader = glitch_shader
+				currFragmentShader = fragment_shader
 				rend.SetShaders(currVertexShader, currFragmentShader)
 
 			if event.key == pygame.K_0:
 				currVertexShader = radiation_pulse_shader
+				currFragmentShader = radiation_fragment_shader
 				rend.SetShaders(currVertexShader, currFragmentShader)
 
 			if event.key == pygame.K_MINUS:
 				currVertexShader = nuclear_decay_shader
+				currFragmentShader = nuclear_fragment_shader
+				rend.SetShaders(currVertexShader, currFragmentShader)
+
+			if event.key == pygame.K_LEFTBRACKET:
+				currVertexShader = vertex_shader
+				currFragmentShader = chromatic_shader
+				rend.SetShaders(currVertexShader, currFragmentShader)
+
+			if event.key == pygame.K_RIGHTBRACKET:
+				currVertexShader = vertex_shader
+				currFragmentShader = outline_shader
 				rend.SetShaders(currVertexShader, currFragmentShader)
 
 
