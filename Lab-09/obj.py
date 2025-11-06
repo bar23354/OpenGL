@@ -1,7 +1,6 @@
 
 class Obj(object):
 	def __init__(self, filename):
-		# Asumiendo que el archivo es un formato .obj
 		with open(filename, "r") as file:
 			lines = file.read().splitlines()
 			
@@ -11,8 +10,6 @@ class Obj(object):
 		self.faces = []
 		
 		for line in lines:
-			# Si la linea no cuenta con un prefijo y un valor,
-			# seguimos a la siguiente la linea
 
 			line = line.rstrip()
 
@@ -21,22 +18,19 @@ class Obj(object):
 			except:
 				continue
 			
-			# Dependiendo del prefijo, parseamos y guardamos
-			# la informacion en el contenedor correcto
-			
-			if prefix == "v": # Vertices
+			if prefix == "v":
 				vert = list(map(float,value.split(" ")))
 				self.vertices.append(vert)
 				
-			elif prefix == "vt": # Coordenadas de textura
+			elif prefix == "vt":
 				vts = list(map(float,value.split(" ")))
 				self.texCoords.append([vts[0],vts[1]])
 				
-			elif prefix == "vn": # Normales
+			elif prefix == "vn":
 				norm = list(map(float,value.split(" ")))
 				self.normals.append(norm)
 				
-			elif prefix == "f": # Caras
+			elif prefix == "f":
 				face = []
 				verts = value.split(" ")
 				for vert in verts:

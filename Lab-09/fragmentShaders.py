@@ -1,5 +1,3 @@
-# GLSL
-
 fragment_shader = '''
 #version 330 core
 

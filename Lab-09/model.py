@@ -114,7 +114,6 @@ class Model(object):
 
 	def Render(self):
 
-		# Dar la textura
 		for i in range(len(self.textures)):
 			glActiveTexture(GL_TEXTURE0 + i)
 			glBindTexture(GL_TEXTURE_2D, self.textures[i])

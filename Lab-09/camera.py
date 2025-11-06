@@ -8,7 +8,6 @@ class Camera(object):
 		
 		self.position = glm.vec3(0,0,0)
 
-		# Angulos de Euler
 		self.rotation = glm.vec3(0,0,0)
 
 		self.viewMatrix = None
@@ -17,8 +16,6 @@ class Camera(object):
 
 
 	def Update(self):
-		# M = T * R
-		# R = pitchMat * yawMat * rollMat
 
 		identity = glm.mat4(1)
 
