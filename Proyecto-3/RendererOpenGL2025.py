@@ -9,6 +9,7 @@ from buffer import Buffer
 from model import Model
 from vertexShaders import *
 from fragmentShaders import *
+from diorama_config import DIORAMA_MODELS, CAMERA_CONFIG, LIGHT_CONFIG
 
 width = 960
 height = 540
@@ -17,38 +18,35 @@ deltaTime = 0.0
 
 def print_menu():
 	print("\n" + "="*60)
-	print("CONTROLES DE CAMARA")
+	print("DIORAMA DE FALLOUT - CONTROLES")
 	print("="*60)
-	print("  MOUSE:")
-	print("    Click Izq + Arrastrar : Orbitar alrededor del modelo")
+	print("  CAMARA:")
+	print("    Click Izq + Arrastrar : Orbitar alrededor del diorama")
 	print("    Rueda del Mouse       : Zoom In/Out")
-	print("")
-	print("  TECLADO:")
-	print("    Flechas ←→            : Rotar horizontalmente (Azimut)")
-	print("    Flechas ↑↓            : Rotar verticalmente (Elevación)")
+	print("    Flechas ←→            : Rotar horizontalmente")
+	print("    Flechas ↑↓            : Rotar verticalmente")
 	print("    Z / X                 : Zoom Out / Zoom In")
+	print("")
+	print("  LUZ:")
+	print("    W/S                   : Mover luz Z")
+	print("    A/D                   : Mover luz X")
+	print("    R/T                   : Mover luz Y")
+	print("")
+	print("  SHADERS:")
+	print("    1                     : Base Shader")
+	print("    2                     : Chromatic Shader")
+	print("    3                     : Glitch Shader")
+	print("    4                     : Hologram Shader")
+	print("    5                     : Nuclear Shader")
+	print("    6                     : Pixelate Shader")
+	print("    7                     : Pulse Shader")
+	print("    8                     : Radiation Shader")
+	print("    9                     : Thermal Shader")
+	print("")
+	print("  OTROS:")
+	print("    F                     : Toggle Filled Mode")
 	print("="*60)
-	print("OTROS CONTROLES")
-	print("="*60)
-	print("  W/S             : Mover luz Z")
-	print("  A/D             : Mover luz X")
-	print("  R/T             : Mover luz Y")
-	print("  1               : Base Shader (Textura normal)")
-	print("  2               : Chromatic Shader")
-	print("  3               : Glitch Shader")
-	print("  4               : Hologram Shader")
-	print("  5               : Nuclear Shader")
-	print("  6               : Pixelate Shader")
-	print("  7               : Pulse Shader")
-	print("  8               : Radiation Shader")
-	print("  9               : Thermal Shader")
-	print("  B               : Modelo Bloatfly (con textura)")
-	print("  N               : Modelo Cardboard (sin textura)")
-	print("  J               : Modelo Eyebot (con textura)")
-	print("  K               : Modelo Metal Crate (sin textura)")
-	print("  L               : Modelo Mr. Handy (con textura)")
-	print("  O               : Modelo Vault Boy (sin textura)")
-	print("  F               : Toggle Filled Mode")
+	print("  MODELOS: Ver diorama_config.py para configurar")
 	print("="*60 + "\n")
 
 print_menu()
@@ -59,7 +57,10 @@ clock = pygame.time.Clock()
 
 
 rend = Renderer(screen)
-rend.pointLight = glm.vec3(1,1,1)
+rend.pointLight = glm.vec3(LIGHT_CONFIG["position"][0], 
+                           LIGHT_CONFIG["position"][1], 
+                           LIGHT_CONFIG["position"][2])
+rend.ambientLight = LIGHT_CONFIG["ambient"]
 
 currVertexShader = vertex_shader
 currFragmentShader = fragment_shader
@@ -75,47 +76,47 @@ skyboxTextures = ["skybox/right.png",
 
 rend.CreateSkybox(skyboxTextures)
 
-#Bloatfly
-bloatflyModel = Model("models/bloatfly.obj")
-bloatflyModel.AddTexture("textures/Bloatfly_d.png")
-bloatflyModel.AddNormalMap("textures/Bloatfly_n.png")
-bloatflyModel.position.z = 0
-bloatflyModel.AutoScale(4.0)
+# Cargar todos los modelos habilitados desde la configuración
+print("Cargando modelos del diorama...")
+models = []
+for config in DIORAMA_MODELS:
+	if not config["enabled"]:
+		print(f"  ⊗ {config['name']:20} - DESACTIVADO")
+		continue
+	
+	try:
+		print(f"  ⊙ {config['name']:20} - Cargando...", end="")
+		model = Model(config["file"])
+		
+		# Cargar textura
+		if config["texture"]:
+			model.AddTexture(config["texture"])
+		
+		# Cargar normal map si existe
+		if config["normal_map"]:
+			model.AddNormalMap(config["normal_map"])
+		
+		# Aplicar transformaciones
+		model.position = glm.vec3(config["position"][0], 
+		                          config["position"][1], 
+		                          config["position"][2])
+		model.rotation = glm.vec3(config["rotation"][0], 
+		                          config["rotation"][1], 
+		                          config["rotation"][2])
+		model.scale = glm.vec3(config["scale"], config["scale"], config["scale"])
+		
+		models.append(model)
+		rend.scene.append(model)
+		print(" ✓")
+	except Exception as e:
+		print(f" ✗ Error: {e}")
 
-#Cardboard Vault-Tec
-cardboardModel = Model("models/cardboardVaultTec.obj")
-cardboardModel.position.z = 0
-cardboardModel.AutoScale(4.0)
+print(f"\nModelos cargados: {len(models)}/{len([m for m in DIORAMA_MODELS if m['enabled']])}")
+print("="*60 + "\n")
 
-#Eyebot
-eyebotModel = Model("models/eyebot.obj")
-eyebotModel.AddTexture("textures/Eyebot_d.png")
-eyebotModel.AddNormalMap("textures/Eyebot_n.png")
-eyebotModel.position.z = 0
-eyebotModel.AutoScale(4.0)
-
-#Crate
-metalCrateModel = Model("models/metalCrate.obj")
-metalCrateModel.position.z = 0
-metalCrateModel.AutoScale(4.0)
-
-#Mr. Handy
-mrHandyModel = Model("models/mrHandy.obj")
-mrHandyModel.AddTexture("textures/mrhandyTexture.png")
-mrHandyModel.position.z = 0
-mrHandyModel.AutoScale(4.0)
-
-#Vault Boy Statue
-vaultBoyModel = Model("models/vaultBoyUniversityStatue.obj")
-vaultBoyModel.position.z = 0
-vaultBoyModel.AutoScale(4.0)
-
-currentModel = bloatflyModel
-rend.scene.append(currentModel)
-
-cameraDistance = 15.0
-cameraAzimuth = 45.0
-cameraElevation = 20.0
+cameraDistance = CAMERA_CONFIG["distance"]
+cameraAzimuth = CAMERA_CONFIG["azimuth"]
+cameraElevation = CAMERA_CONFIG["elevation"]
 
 MIN_DISTANCE = 5.0
 MAX_DISTANCE = 100.0
@@ -130,7 +131,9 @@ mouseSensitivity = 0.2
 keyboardRotationSpeed = 90.0
 keyboardZoomSpeed = 20.0
 
-targetPosition = glm.vec3(0, 0, 0)
+targetPosition = glm.vec3(CAMERA_CONFIG["target"][0], 
+                          CAMERA_CONFIG["target"][1], 
+                          CAMERA_CONFIG["target"][2])
 
 def updateCameraPosition():
     azimuthRad = glm.radians(cameraAzimuth)
@@ -207,42 +210,6 @@ while isRunning:
 				currVertexShader = vertex_shader
 				currFragmentShader = thermal_shader
 				rend.SetShaders(currVertexShader, currFragmentShader)
-
-			if event.key == pygame.K_b:
-				rend.scene.clear()
-				currentModel = bloatflyModel
-				rend.scene.append(currentModel)
-				rend.camera.LookAt(currentModel.position)
-
-			if event.key == pygame.K_n:
-				rend.scene.clear()
-				currentModel = cardboardModel
-				rend.scene.append(currentModel)
-				rend.camera.LookAt(currentModel.position)
-
-			if event.key == pygame.K_j:
-				rend.scene.clear()
-				currentModel = eyebotModel
-				rend.scene.append(currentModel)
-				rend.camera.LookAt(currentModel.position)
-
-			if event.key == pygame.K_k:
-				rend.scene.clear()
-				currentModel = metalCrateModel
-				rend.scene.append(currentModel)
-				rend.camera.LookAt(currentModel.position)
-
-			if event.key == pygame.K_l:
-				rend.scene.clear()
-				currentModel = mrHandyModel
-				rend.scene.append(currentModel)
-				rend.camera.LookAt(currentModel.position)
-
-			if event.key == pygame.K_o:
-				rend.scene.clear()
-				currentModel = vaultBoyModel
-				rend.scene.append(currentModel)
-				rend.camera.LookAt(currentModel.position)
 
 
 		elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -330,11 +297,6 @@ while isRunning:
 
 	if keys[K_t]:
 		rend.pointLight.y += 10 * deltaTime
-
-
-	targetPosition = currentModel.position
-
-	currentModel.rotation.y += 45 * deltaTime
 
 	rend.Render()
 	pygame.display.flip()
