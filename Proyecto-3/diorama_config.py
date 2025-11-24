@@ -80,7 +80,7 @@ DIORAMA_MODELS = [
     },
     {
         "name": "MrHandy",
-        "enabled": True,
+        "enabled": False,
         "file": "models/MrHandy.obj",
         "texture": "textures/MrHandy_d.png",
         "normal_map": None,
@@ -102,10 +102,12 @@ DIORAMA_MODELS = [
         "name": "Securitron",
         "enabled": True,
         "file": "models/Securitron.obj",
-        "texture": "textures/Securitron_d.png",
-        "normal_map": "textures/Securitron_n.png",
-        "position": [-10, -1.5, -9],
-        "rotation": [0, 200, 0],
+        "use_material_textures": True,
+        "texture": None,
+        "normal_map": None,
+        "face_texture": "textures/faces/infantry_neutral.png",
+        "position": [4, -1.8, 8],
+        "rotation": [0, 80, 0],
         "scale": 0.05
     },
     {
@@ -127,10 +129,93 @@ DIORAMA_MODELS = [
         "position": [12, 0, -15],
         "rotation": [0, 0, 0],
         "scale": 35.0
+    },
+    {
+        "name": "Box",
+        "enabled": True,
+        "file": "models/Box.obj",
+        "texture": "textures/Box_d.png",
+        "normal_map": "textures/Box_n.png",
+        "position": [5, -4, 48],
+        "rotation": [0, -40, 0],
+        "scale": 1.5
+    },
+    {
+        "name": "Flag",
+        "enabled": True,
+        "file": "models/Flag.obj",
+        "texture": "textures/Flag_d.png",
+        "normal_map": None,
+        "position": [-1, 1.5, -15],
+        "rotation": [0, 180, 0],
+        "scale": 2.0
+    },
+    {
+        "name": "Gurney",
+        "enabled": True,
+        "file": "models/Gurney.obj",
+        "texture": "textures/Gurney_d.png",
+        "normal_map": "textures/Gurney_n.png",
+        "position": [15, -4.8, 18],
+        "rotation": [0, 180, 0],
+        "scale": 0.6
+    },
+    {
+        "name": "Ranger",
+        "enabled": True,
+        "file": "models/Ranger.obj",
+        "texture": "textures/Ranger_d.png",
+        "normal_map": "textures/Ranger_n.png",
+        "position": [25, -0.3, 24],
+        "rotation": [0, 220, 0],
+        "scale": 0.09
+    },
+    {
+        "name": "Rubble",
+        "enabled": False,
+        "file": "models/Rubble.obj",
+        "texture": "textures/Rubble_d.png",
+        "normal_map": "textures/Rubble_n.png",
+        "position": [-15, 0, 13],
+        "rotation": [0, 0, 0],
+        "scale": 0.001
+    },
+    {
+        "name": "Securitron2", #JANE
+        "enabled": True,
+        "file": "models/Securitron.obj",
+        "use_material_textures": True,
+        "texture": None,
+        "normal_map": None,
+        "face_texture": "textures/faces/jane_neutral.png",
+        "position": [-7, -1.7, -12],
+        "rotation": [0, 220, 0],
+        "scale": 0.05
+    },
+    {
+        "name": "Securitron3", #HOUSE
+        "enabled": True,
+        "file": "models/Securitron.obj",
+        "use_material_textures": True,
+        "texture": None,
+        "normal_map": None,
+        "face_texture": "textures/faces/mrhouse_neutral.png",
+        "position": [-8, -1.7, -9],
+        "rotation": [0, 70, 0],
+        "scale": 0.05
+    },
+    {
+        "name": "Concrete2",
+        "enabled": True,
+        "file": "models/Concrete.obj",
+        "texture": "textures/Concrete_d.jpg",
+        "normal_map": "textures/Concrete_n.jpg",
+        "position": [-6, -6.2, -12],
+        "rotation": [0, -45, 0],
+        "scale": 9.0
     }
 ]
 
-# Configuración de cámara inicial
 CAMERA_CONFIG = {
     "distance": 20.0,
     "azimuth": 45.0,
@@ -138,8 +223,7 @@ CAMERA_CONFIG = {
     "target": [0, 0, 0]
 }
 
-# Configuración de luz
 LIGHT_CONFIG = {
-    "position": [5, 5, 5],
-    "ambient": 0.3
+    "position": [5, 15, 5],  # Luz más alta para mayor cobertura
+    "ambient": 0.5  # Mayor luz ambiente para mejor visibilidad
 }

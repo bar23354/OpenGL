@@ -15,14 +15,15 @@ class Model(object):
 		self.rotation = glm.vec3(0,0,0)
 		self.scale = glm.vec3(1,1,1)
 
-		self.BuildBuffers()
-
 		self.textures = []
 		self.textureNames = []
 		self.matIdBuffer = None
 		self.rawMatIds = []
 		self.useMaterialTexturing = False
 		self.hasNormalMap = False
+		self.hasFaceTexture = False
+
+		self.BuildBuffers()
 
 	def ComputeBounds(self):
 		if len(self.objFile.vertices) == 0:
@@ -76,13 +77,11 @@ class Model(object):
 			for i in range(len(face)):
 				facePositions.append(self.objFile.vertices[face[i][0] - 1])
 				
-				# Handle texCoords - use default [0,0] if not available
 				if face[i][1] > 0 and face[i][1] <= len(self.objFile.texCoords):
 					faceTexCoords.append(self.objFile.texCoords[face[i][1] - 1])
 				else:
 					faceTexCoords.append([0.0, 0.0])
 				
-				# Handle normals - use default [0,0,1] if not available
 				if face[i][2] > 0 and face[i][2] <= len(self.objFile.normals):
 					faceNormals.append(self.objFile.normals[face[i][2] - 1])
 				else:
@@ -118,15 +117,43 @@ class Model(object):
 		self.matIdBuffer = Buffer(self.rawMatIds)
 
 	def AddTexture(self, filename):
-		textureSurface = pygame.image.load(filename)
-		textureData = pygame.image.tostring(textureSurface, "RGBA", True)
+		try:
+			textureSurface = pygame.image.load(filename)
+			textureData = pygame.image.tostring(textureSurface, "RGBA", True)
+			width = textureSurface.get_width()
+			height = textureSurface.get_height()
+		except:
+			try:
+				import imageio.v3 as iio
+				import numpy as np
+				img = iio.imread(filename)
+				
+				if img.shape[2] == 3:
+					alpha = np.ones((img.shape[0], img.shape[1], 1), dtype=img.dtype) * 255
+					img = np.concatenate([img, alpha], axis=2)
+				
+				img = np.flipud(img)
+				
+				textureData = img.tobytes()
+				height, width = img.shape[:2]
+			except:
+				try:
+					from PIL import Image
+					img = Image.open(filename)
+					img = img.convert("RGBA")
+					img = img.transpose(Image.FLIP_TOP_BOTTOM)
+					textureData = img.tobytes()
+					width, height = img.size
+				except ImportError:
+					raise Exception(f"Cannot load {filename}. Install imageio: pip install imageio")
+		
 		texture = glGenTextures(1)
 		glBindTexture(GL_TEXTURE_2D, texture)
 		glTexImage2D(GL_TEXTURE_2D,
 					 0,
 					 GL_RGBA,
-					 textureSurface.get_width(),
-					 textureSurface.get_height(),
+					 width,
+					 height,
 					 0,
 					 GL_RGBA,
 					 GL_UNSIGNED_BYTE,
@@ -135,10 +162,90 @@ class Model(object):
 		self.textures.append(texture)
 		self.textureNames.append(os.path.basename(filename))
 		self._remap_mat_ids_to_textureslots()
+	
+	def AddFaceTexture(self, filename):
+		"""Add a face decal texture specifically for Securitrons. This goes in tex2."""
+		try:
+			textureSurface = pygame.image.load(filename)
+			textureData = pygame.image.tostring(textureSurface, "RGBA", True)
+			width = textureSurface.get_width()
+			height = textureSurface.get_height()
+		except:
+			try:
+				import imageio.v3 as iio
+				import numpy as np
+				img = iio.imread(filename)
+				if img.shape[2] == 3:
+					alpha = np.ones((img.shape[0], img.shape[1], 1), dtype=img.dtype) * 255
+					img = np.concatenate([img, alpha], axis=2)
+				img = np.flipud(img)
+				textureData = img.tobytes()
+				height, width = img.shape[:2]
+			except:
+				try:
+					from PIL import Image
+					img = Image.open(filename)
+					img = img.convert("RGBA")
+					img = img.transpose(Image.FLIP_TOP_BOTTOM)
+					textureData = img.tobytes()
+					width, height = img.size
+				except ImportError:
+					raise Exception(f"Cannot load {filename}. Install imageio: pip install imageio")
+		
+		texture = glGenTextures(1)
+		glBindTexture(GL_TEXTURE_2D, texture)
+		glTexImage2D(GL_TEXTURE_2D,
+					 0,
+					 GL_RGBA,
+					 width,
+					 height,
+					 0,
+					 GL_RGBA,
+					 GL_UNSIGNED_BYTE,
+					 textureData)
+		glGenerateMipmap(GL_TEXTURE_2D)
+		
+		if self.useMaterialTexturing and len(self.textures) > 3:
+			print(f"    Replacing Screen material texture with face: {os.path.basename(filename)}")
+			self.textures[3] = texture
+			self.textureNames[3] = os.path.basename(filename)
+		else:
+			self.textures.append(texture)
+			self.textureNames.append(os.path.basename(filename))
+		
+		self.hasFaceTexture = True
 
 	def AddNormalMap(self, filename):
 		"""Add a normal map texture. Should be added after the diffuse texture."""
-		textureSurface = pygame.image.load(filename)
+		try:
+			textureSurface = pygame.image.load(filename)
+		except:
+			try:
+				from PIL import Image
+				img = Image.open(filename)
+				img = img.convert("RGBA")
+				textureData = img.tobytes()
+				width, height = img.size
+				
+				texture = glGenTextures(1)
+				glBindTexture(GL_TEXTURE_2D, texture)
+				glTexImage2D(GL_TEXTURE_2D,
+							 0,
+							 GL_RGBA,
+							 width,
+							 height,
+							 0,
+							 GL_RGBA,
+							 GL_UNSIGNED_BYTE,
+							 textureData)
+				glGenerateMipmap(GL_TEXTURE_2D)
+				self.textures.append(texture)
+				self.textureNames.append(os.path.basename(filename))
+				self.hasNormalMap = True
+				return
+			except ImportError:
+				raise Exception(f"Cannot load {filename}. Install Pillow: pip install Pillow")
+		
 		textureData = pygame.image.tostring(textureSurface, "RGBA", True)
 		texture = glGenTextures(1)
 		glBindTexture(GL_TEXTURE_2D, texture)
@@ -156,9 +263,59 @@ class Model(object):
 		self.textureNames.append(os.path.basename(filename))
 		self.hasNormalMap = True
 
+	def LoadMaterialTextures(self):
+		"""Load all textures from the OBJ's MTL file for material-based texturing"""
+		if not hasattr(self.objFile, 'materials') or not hasattr(self.objFile, 'materialTextures'):
+			print("  Warning: No materials found in OBJ")
+			return
+		
+		try:
+			from texture_mapping import map_texture_path
+		except ImportError:
+			map_texture_path = lambda x: x
+		
+		print(f"  Loading material textures for {len(self.objFile.materials)} materials...")
+		
+		sorted_materials = sorted(self.objFile.materials.items(), key=lambda x: x[1])
+		
+		obj_dir = os.path.dirname(getattr(self.objFile, 'filename', ''))
+		
+		for mat_name, mat_id in sorted_materials:
+			if mat_name in self.objFile.materialTextures:
+				tex_path = self.objFile.materialTextures[mat_name]
+				tex_path_mapped = map_texture_path(tex_path)
+				
+				if tex_path_mapped.startswith("textures/"):
+					full_path = tex_path_mapped
+				elif obj_dir and not os.path.isabs(tex_path_mapped):
+					full_path = os.path.join(obj_dir, tex_path_mapped)
+				else:
+					full_path = tex_path_mapped
+				
+				print(f"    Material '{mat_name}' (ID {mat_id}): {tex_path_mapped}")
+				
+				try:
+					self.AddTexture(full_path)
+				except Exception as e:
+					print(f"      Failed to load: {e}")
+					self.textures.append(0)
+					self.textureNames.append(f"missing_{mat_name}")
+			else:
+				print(f"    Material '{mat_name}' (ID {mat_id}): No texture")
+				self.textures.append(0)
+				self.textureNames.append(f"missing_{mat_name}")
+		
+		self.useMaterialTexturing = True
+		self._remap_mat_ids_to_textureslots()
+
 	def _remap_mat_ids_to_textureslots(self):
 		if self.rawMatIds is None or len(self.rawMatIds) == 0:
 			return
+		
+		if self.useMaterialTexturing:
+			self.matIdBuffer = Buffer(self.rawMatIds)
+			return
+		
 		mapped = []
 		texCount = len(self.textureNames)
 		for raw in self.rawMatIds:

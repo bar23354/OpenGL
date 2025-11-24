@@ -3,6 +3,8 @@ import pygame.display
 from pygame.locals import *
 
 import glm
+from OpenGL.GL import *
+from OpenGL.GL.shaders import compileProgram, compileShader
 
 from gl import Renderer
 from buffer import Buffer
@@ -21,18 +23,22 @@ def print_menu():
 	print("DIORAMA DE FALLOUT - CONTROLES")
 	print("="*60)
 	print("  CAMARA:")
-	print("    Click Izq + Arrastrar : Orbitar alrededor del diorama")
+	print("    Click Izq + Arrastrar : Orbitar alrededor del punto")
 	print("    Rueda del Mouse       : Zoom In/Out")
-	print("    Flechas ←→            : Rotar horizontalmente")
-	print("    Flechas ↑↓            : Rotar verticalmente")
+	print("    Flechas <- ->         : Rotar horizontalmente")
+	print("    Flechas ^ v           : Rotar verticalmente")
 	print("    Z / X                 : Zoom Out / Zoom In")
+	print("    PageUp / PageDown     : Desplazar verticalmente")
+	print("    TAB                   : Cambiar a siguiente modelo")
+	print("    SHIFT+TAB             : Cambiar a modelo anterior")
+	print("    HOME                  : Volver a vista global")
 	print("")
 	print("  LUZ:")
 	print("    W/S                   : Mover luz Z")
 	print("    A/D                   : Mover luz X")
 	print("    R/T                   : Mover luz Y")
 	print("")
-	print("  SHADERS:")
+	print("  SHADERS (Modelo Seleccionado):")
 	print("    1                     : Base Shader")
 	print("    2                     : Chromatic Shader")
 	print("    3                     : Glitch Shader")
@@ -42,8 +48,10 @@ def print_menu():
 	print("    7                     : Pulse Shader")
 	print("    8                     : Radiation Shader")
 	print("    9                     : Thermal Shader")
+	print("    0                     : Remover shader personalizado")
 	print("")
-	print("  OTROS:")
+	print("  MODOS:")
+	print("    M                     : Modo aleatorio (cada modelo diferente)")
 	print("    F                     : Toggle Filled Mode")
 	print("="*60)
 	print("  MODELOS: Ver diorama_config.py para configurar")
@@ -76,27 +84,75 @@ skyboxTextures = ["skybox/right.png",
 
 rend.CreateSkybox(skyboxTextures)
 
-# Cargar todos los modelos habilitados desde la configuración
 print("Cargando modelos del diorama...")
 models = []
+model_cache = {}
+
 for config in DIORAMA_MODELS:
 	if not config["enabled"]:
-		print(f"  ⊗ {config['name']:20} - DESACTIVADO")
+		print(f"  x {config['name']:20} - DESACTIVADO")
 		continue
 	
 	try:
-		print(f"  ⊙ {config['name']:20} - Cargando...", end="")
-		model = Model(config["file"])
+		print(f"  * {config['name']:20} - Cargando...", end="")
 		
-		# Cargar textura
-		if config["texture"]:
-			model.AddTexture(config["texture"])
+		cache_key = config["file"]
 		
-		# Cargar normal map si existe
-		if config["normal_map"]:
-			model.AddNormalMap(config["normal_map"])
+		needs_unique_textures = config.get("face_texture") is not None
 		
-		# Aplicar transformaciones
+		if cache_key in model_cache and not needs_unique_textures:
+			base_model = model_cache[cache_key]
+			model = Model.__new__(Model)
+			model.objFile = base_model.objFile
+			model.posBuffer = base_model.posBuffer
+			model.texCoordsBuffer = base_model.texCoordsBuffer
+			model.normalsBuffer = base_model.normalsBuffer
+			model.matIdBuffer = base_model.matIdBuffer
+			model.rawMatIds = base_model.rawMatIds
+			model.vertexCount = base_model.vertexCount
+			model.textures = base_model.textures
+			model.textureNames = base_model.textureNames
+			model.useMaterialTexturing = base_model.useMaterialTexturing
+			model.hasNormalMap = base_model.hasNormalMap
+			model.position = glm.vec3(0, 0, 0)
+			model.rotation = glm.vec3(0, 0, 0)
+			model.scale = glm.vec3(1, 1, 1)
+			print(" OK (instancia)")
+		else:
+			if cache_key in model_cache:
+				base_model = model_cache[cache_key]
+				model = Model.__new__(Model)
+				model.objFile = base_model.objFile
+				model.posBuffer = base_model.posBuffer
+				model.texCoordsBuffer = base_model.texCoordsBuffer
+				model.normalsBuffer = base_model.normalsBuffer
+				model.matIdBuffer = base_model.matIdBuffer
+				model.rawMatIds = base_model.rawMatIds
+				model.vertexCount = base_model.vertexCount
+				model.textures = []
+				model.textureNames = []
+				model.useMaterialTexturing = False
+				model.hasNormalMap = False
+				model.position = glm.vec3(0, 0, 0)
+				model.rotation = glm.vec3(0, 0, 0)
+				model.scale = glm.vec3(1, 1, 1)
+			else:
+				model = Model(config["file"])
+				model_cache[cache_key] = model
+			
+			if config.get("use_material_textures"):
+				model.LoadMaterialTextures()
+			elif config["texture"]:
+				model.AddTexture(config["texture"])
+			
+			if config.get("normal_map") and not config.get("use_material_textures"):
+				model.AddNormalMap(config["normal_map"])
+
+			if config.get("face_texture"):
+				model.AddFaceTexture(config["face_texture"])
+			
+			print(" OK" if not needs_unique_textures else " OK (cara única)")
+
 		model.position = glm.vec3(config["position"][0], 
 		                          config["position"][1], 
 		                          config["position"][2])
@@ -107,21 +163,55 @@ for config in DIORAMA_MODELS:
 		
 		models.append(model)
 		rend.scene.append(model)
-		print(" ✓")
+		
 	except Exception as e:
-		print(f" ✗ Error: {e}")
+		print(f" ERROR: {e}")
 
 print(f"\nModelos cargados: {len(models)}/{len([m for m in DIORAMA_MODELS if m['enabled']])}")
+print("="*60 + "\n")
+
+currentModelIndex = -1
+modelShaders = {}
+randomShaderMode = False
+
+shaderSourceList = [
+	(vertex_shader, fragment_shader, "Base"),
+	(vertex_shader, chromatic_shader, "Chromatic"),
+	(glitch_shader, fragment_shader, "Glitch"),
+	(vertex_shader, hologram_shader, "Hologram"),
+	(nuclear_decay_shader, nuclear_fragment_shader, "Nuclear"),
+	(vertex_shader, pixelate_shader, "Pixelate"),
+	(pulse_shader, fragment_shader, "Pulse"),
+	(radiation_pulse_shader, radiation_fragment_shader, "Radiation"),
+	(vertex_shader, thermal_shader, "Thermal")
+]
+
+print("Compilando shaders...")
+compiledShaders = []
+for i, (vShader, fShader, name) in enumerate(shaderSourceList):
+	try:
+		shader = compileProgram(
+			compileShader(vShader, GL_VERTEX_SHADER),
+			compileShader(fShader, GL_FRAGMENT_SHADER)
+		)
+		compiledShaders.append(shader)
+		print(f"  ✓ {i+1}. {name}")
+	except Exception as e:
+		print(f"  ✗ {i+1}. {name} - Error: {e}")
+		compiledShaders.append(None)
 print("="*60 + "\n")
 
 cameraDistance = CAMERA_CONFIG["distance"]
 cameraAzimuth = CAMERA_CONFIG["azimuth"]
 cameraElevation = CAMERA_CONFIG["elevation"]
+verticalOffset = 0.0
 
 MIN_DISTANCE = 5.0
 MAX_DISTANCE = 100.0
 MIN_ELEVATION = -89.0
 MAX_ELEVATION = 89.0
+MIN_VERTICAL = -50.0
+MAX_VERTICAL = 50.0
 
 mousePressed = False
 lastMouseX = 0
@@ -139,12 +229,31 @@ def updateCameraPosition():
     azimuthRad = glm.radians(cameraAzimuth)
     elevationRad = glm.radians(cameraElevation)
     
-    x = targetPosition.x + cameraDistance * glm.cos(elevationRad) * glm.sin(azimuthRad)
-    y = targetPosition.y + cameraDistance * glm.sin(elevationRad)
-    z = targetPosition.z + cameraDistance * glm.cos(elevationRad) * glm.cos(azimuthRad)
+    adjustedTarget = glm.vec3(targetPosition.x, targetPosition.y + verticalOffset, targetPosition.z)
+    
+    x = adjustedTarget.x + cameraDistance * glm.cos(elevationRad) * glm.sin(azimuthRad)
+    y = adjustedTarget.y + cameraDistance * glm.sin(elevationRad)
+    z = adjustedTarget.z + cameraDistance * glm.cos(elevationRad) * glm.cos(azimuthRad)
     
     rend.camera.position = glm.vec3(x, y, z)
-    rend.camera.LookAt(targetPosition)
+    rend.camera.LookAt(adjustedTarget)
+
+def focusOnModel(modelIndex):
+    global targetPosition, cameraDistance, currentModelIndex
+    if modelIndex >= 0 and modelIndex < len(models):
+        currentModelIndex = modelIndex
+        targetPosition = models[modelIndex].position
+        cameraDistance = 15.0
+        model_name = DIORAMA_MODELS[[i for i, m in enumerate(DIORAMA_MODELS) if m["enabled"]][modelIndex]]['name']
+        print(f"\nEnfocando: {model_name}")
+    else:
+        currentModelIndex = -1
+        targetPosition = glm.vec3(CAMERA_CONFIG["target"][0], 
+                                  CAMERA_CONFIG["target"][1], 
+                                  CAMERA_CONFIG["target"][2])
+        cameraDistance = CAMERA_CONFIG["distance"]
+        print("\nVista global del diorama")
+    updateCameraPosition()
 
 updateCameraPosition()
 
@@ -165,51 +274,125 @@ while isRunning:
 		elif event.type == pygame.KEYDOWN:
 			if event.key == pygame.K_f:
 				rend.ToggleFilledMode()
+			
+			elif event.key == pygame.K_TAB:
+				if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
+					newIndex = currentModelIndex - 1
+					if newIndex < -1:
+						newIndex = len(models) - 1
+				else:
+					newIndex = (currentModelIndex + 1) % len(models)
+				focusOnModel(newIndex)
+			
+			elif event.key == pygame.K_HOME:
+				focusOnModel(-1)
+			
+			elif event.key == pygame.K_m:
+				randomShaderMode = not randomShaderMode
+				if randomShaderMode:
+					import random
+					for i, model in enumerate(models):
+						modelShaders[i] = random.randint(0, len(compiledShaders) - 1)
+					print("\nRandom Shader Mode")
+				else:
+					modelShaders.clear()
+					print("\nDefault Shader Mode")
+			
+			elif event.key == pygame.K_1:
+				if currentModelIndex >= 0:
+					modelShaders[currentModelIndex] = 0
+					model_name = DIORAMA_MODELS[[i for i, m in enumerate(DIORAMA_MODELS) if m["enabled"]][currentModelIndex]]['name']
+					print(f"Shader Base → {model_name}")
+				else:
+					currVertexShader = vertex_shader
+					currFragmentShader = fragment_shader
+					rend.SetShaders(currVertexShader, currFragmentShader)
 
-			if event.key == pygame.K_1:
-				currVertexShader = vertex_shader
-				currFragmentShader = fragment_shader
-				rend.SetShaders(currVertexShader, currFragmentShader)
+			elif event.key == pygame.K_2:
+				if currentModelIndex >= 0:
+					modelShaders[currentModelIndex] = 1
+					model_name = DIORAMA_MODELS[[i for i, m in enumerate(DIORAMA_MODELS) if m["enabled"]][currentModelIndex]]['name']
+					print(f"Shader Chromatic → {model_name}")
+				else:
+					currVertexShader = vertex_shader
+					currFragmentShader = chromatic_shader
+					rend.SetShaders(currVertexShader, currFragmentShader)
 
-			if event.key == pygame.K_2:
-				currVertexShader = vertex_shader
-				currFragmentShader = chromatic_shader
-				rend.SetShaders(currVertexShader, currFragmentShader)
+			elif event.key == pygame.K_3:
+				if currentModelIndex >= 0:
+					modelShaders[currentModelIndex] = 2
+					model_name = DIORAMA_MODELS[[i for i, m in enumerate(DIORAMA_MODELS) if m["enabled"]][currentModelIndex]]['name']
+					print(f"Shader Glitch → {model_name}")
+				else:
+					currVertexShader = glitch_shader
+					currFragmentShader = fragment_shader
+					rend.SetShaders(currVertexShader, currFragmentShader)
 
-			if event.key == pygame.K_3:
-				currVertexShader = glitch_shader
-				currFragmentShader = fragment_shader
-				rend.SetShaders(currVertexShader, currFragmentShader)
+			elif event.key == pygame.K_4:
+				if currentModelIndex >= 0:
+					modelShaders[currentModelIndex] = 3
+					model_name = DIORAMA_MODELS[[i for i, m in enumerate(DIORAMA_MODELS) if m["enabled"]][currentModelIndex]]['name']
+					print(f"Shader Hologram → {model_name}")
+				else:
+					currVertexShader = vertex_shader
+					currFragmentShader = hologram_shader
+					rend.SetShaders(currVertexShader, currFragmentShader)
 
-			if event.key == pygame.K_4:
-				currVertexShader = vertex_shader
-				currFragmentShader = hologram_shader
-				rend.SetShaders(currVertexShader, currFragmentShader)
+			elif event.key == pygame.K_5:
+				if currentModelIndex >= 0:
+					modelShaders[currentModelIndex] = 4
+					model_name = DIORAMA_MODELS[[i for i, m in enumerate(DIORAMA_MODELS) if m["enabled"]][currentModelIndex]]['name']
+					print(f"Shader Nuclear → {model_name}")
+				else:
+					currVertexShader = nuclear_decay_shader
+					currFragmentShader = nuclear_fragment_shader
+					rend.SetShaders(currVertexShader, currFragmentShader)
 
-			if event.key == pygame.K_5:
-				currVertexShader = nuclear_decay_shader
-				currFragmentShader = nuclear_fragment_shader
-				rend.SetShaders(currVertexShader, currFragmentShader)
+			elif event.key == pygame.K_6:
+				if currentModelIndex >= 0:
+					modelShaders[currentModelIndex] = 5
+					model_name = DIORAMA_MODELS[[i for i, m in enumerate(DIORAMA_MODELS) if m["enabled"]][currentModelIndex]]['name']
+					print(f"Shader Pixelate → {model_name}")
+				else:
+					currVertexShader = vertex_shader
+					currFragmentShader = pixelate_shader
+					rend.SetShaders(currVertexShader, currFragmentShader)
 
-			if event.key == pygame.K_6:
-				currVertexShader = vertex_shader
-				currFragmentShader = pixelate_shader
-				rend.SetShaders(currVertexShader, currFragmentShader)
+			elif event.key == pygame.K_7:
+				if currentModelIndex >= 0:
+					modelShaders[currentModelIndex] = 6
+					model_name = DIORAMA_MODELS[[i for i, m in enumerate(DIORAMA_MODELS) if m["enabled"]][currentModelIndex]]['name']
+					print(f"Shader Pulse → {model_name}")
+				else:
+					currVertexShader = pulse_shader
+					currFragmentShader = fragment_shader
+					rend.SetShaders(currVertexShader, currFragmentShader)
 
-			if event.key == pygame.K_7:
-				currVertexShader = pulse_shader
-				currFragmentShader = fragment_shader
-				rend.SetShaders(currVertexShader, currFragmentShader)
+			elif event.key == pygame.K_8:
+				if currentModelIndex >= 0:
+					modelShaders[currentModelIndex] = 7
+					model_name = DIORAMA_MODELS[[i for i, m in enumerate(DIORAMA_MODELS) if m["enabled"]][currentModelIndex]]['name']
+					print(f"Shader Radiation → {model_name}")
+				else:
+					currVertexShader = radiation_pulse_shader
+					currFragmentShader = radiation_fragment_shader
+					rend.SetShaders(currVertexShader, currFragmentShader)
 
-			if event.key == pygame.K_8:
-				currVertexShader = radiation_pulse_shader
-				currFragmentShader = radiation_fragment_shader
-				rend.SetShaders(currVertexShader, currFragmentShader)
-
-			if event.key == pygame.K_9:
-				currVertexShader = vertex_shader
-				currFragmentShader = thermal_shader
-				rend.SetShaders(currVertexShader, currFragmentShader)
+			elif event.key == pygame.K_9:
+				if currentModelIndex >= 0:
+					modelShaders[currentModelIndex] = 8
+					model_name = DIORAMA_MODELS[[i for i, m in enumerate(DIORAMA_MODELS) if m["enabled"]][currentModelIndex]]['name']
+					print(f"Shader Thermal → {model_name}")
+				else:
+					currVertexShader = vertex_shader
+					currFragmentShader = thermal_shader
+					rend.SetShaders(currVertexShader, currFragmentShader)
+			
+			elif event.key == pygame.K_0:
+				if currentModelIndex >= 0 and currentModelIndex in modelShaders:
+					del modelShaders[currentModelIndex]
+					model_name = DIORAMA_MODELS[[i for i, m in enumerate(DIORAMA_MODELS) if m["enabled"]][currentModelIndex]]['name']
+					print(f"X Shader removido de {model_name}")
 
 
 		elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -277,6 +460,16 @@ while isRunning:
 		cameraDistance -= keyboardZoomSpeed * deltaTime
 		cameraDistance = max(MIN_DISTANCE, cameraDistance)
 		updateCameraPosition()
+	
+	if keys[K_PAGEUP]:
+		verticalOffset += 10 * deltaTime
+		verticalOffset = min(MAX_VERTICAL, verticalOffset)
+		updateCameraPosition()
+	
+	if keys[K_PAGEDOWN]:
+		verticalOffset -= 10 * deltaTime
+		verticalOffset = max(MIN_VERTICAL, verticalOffset)
+		updateCameraPosition()
 
 
 
@@ -298,7 +491,57 @@ while isRunning:
 	if keys[K_t]:
 		rend.pointLight.y += 10 * deltaTime
 
-	rend.Render()
+	if randomShaderMode or len(modelShaders) > 0:
+		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT )
+		rend.camera.Update()
+		if rend.skybox is not None:
+			rend.skybox.Render()
+		
+		for i, obj in enumerate(models):
+			if i in modelShaders:
+				shaderIndex = modelShaders[i]
+				modelShader = compiledShaders[shaderIndex]
+			else:
+				modelShader = rend.activeShader
+			
+			if modelShader is None:
+				continue
+			
+			glUseProgram(modelShader)
+			glUniformMatrix4fv(glGetUniformLocation(modelShader, "viewMatrix"),
+							1, GL_FALSE, glm.value_ptr(rend.camera.viewMatrix))
+			glUniformMatrix4fv(glGetUniformLocation(modelShader, "projectionMatrix"),
+							1, GL_FALSE, glm.value_ptr(rend.camera.projectionMatrix))
+			glUniform3fv(glGetUniformLocation(modelShader, "pointLight"), 1, glm.value_ptr(rend.pointLight))
+			glUniform1f(glGetUniformLocation(modelShader, "ambientLight"), rend.ambientLight)
+			glUniform1f(glGetUniformLocation(modelShader, "value"), rend.value)
+			glUniform1f(glGetUniformLocation(modelShader, "time"), rend.elapsedTime)
+			
+			for j in range(7):
+				glUniform1i(glGetUniformLocation(modelShader, f"tex{j}"), j)
+			
+			glUniformMatrix4fv(glGetUniformLocation(modelShader, "modelMatrix"),
+							1, GL_FALSE, glm.value_ptr(obj.GetModelMatrix()))
+			
+			useMat = 1 if hasattr(obj, 'useMaterialTexturing') and obj.useMaterialTexturing else 0
+			locUseMat = glGetUniformLocation(modelShader, "useMatId")
+			if locUseMat != -1:
+				glUniform1i(locUseMat, useMat)
+			
+			hasNormalMap = 1 if hasattr(obj, 'hasNormalMap') and obj.hasNormalMap else 0
+			locHasNormalMap = glGetUniformLocation(modelShader, "hasNormalMap")
+			if locHasNormalMap != -1:
+				glUniform1i(locHasNormalMap, hasNormalMap)
+			
+			hasFaceTexture = 1 if hasattr(obj, 'hasFaceTexture') and obj.hasFaceTexture else 0
+			locHasFaceTexture = glGetUniformLocation(modelShader, "hasFaceTexture")
+			if locHasFaceTexture != -1:
+				glUniform1i(locHasFaceTexture, hasFaceTexture)
+			
+			obj.Render()
+	else:
+		rend.Render()
+	
 	pygame.display.flip()
 
 pygame.quit()

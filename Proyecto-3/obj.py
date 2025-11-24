@@ -3,6 +3,7 @@ import os
 
 class Obj(object):
 	def __init__(self, filename):
+		self.filename = filename
 		with open(filename, "r") as file:
 			lines = file.read().splitlines()
 			
@@ -43,8 +44,8 @@ class Obj(object):
 				mtlPath = os.path.join(objDir, self.mtlFileName)
 				try:
 					self._load_mtl(mtlPath)
-				except Exception:
-					pass
+				except Exception as e:
+					print(f"Warning: Failed to load MTL file '{mtlPath}': {e}")
 
 			elif prefix == "usemtl":
 				matName = value.strip()
@@ -68,7 +69,7 @@ class Obj(object):
 						vertex_index[2] = int(parts[2])
 					
 					face.append(vertex_index)
-				self.faces.append(face)                                                                                                                                                                                                                                                                                                                                                                                            
+				self.faces.append(face)
 				if currentMaterial is None:
 					self.faceMaterials.append(-1)
 				else:

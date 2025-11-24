@@ -105,11 +105,15 @@ class Renderer(object):
                 if locUseMat != -1:
                     glUniform1i(locUseMat, useMat)
                 
-                # Check if model has normal map
                 hasNormalMap = 1 if hasattr(obj, 'hasNormalMap') and obj.hasNormalMap else 0
                 locHasNormalMap = glGetUniformLocation(self.activeShader, "hasNormalMap")
                 if locHasNormalMap != -1:
                     glUniform1i(locHasNormalMap, hasNormalMap)
+                
+                hasFaceTexture = 1 if hasattr(obj, 'hasFaceTexture') and obj.hasFaceTexture else 0
+                locHasFaceTexture = glGetUniformLocation(self.activeShader, "hasFaceTexture")
+                if locHasFaceTexture != -1:
+                    glUniform1i(locHasFaceTexture, hasFaceTexture)
 
             obj.Render()
 

@@ -21,6 +21,7 @@ uniform vec3 pointLight;
 uniform float ambientLight;
 uniform int useMatId;
 uniform int hasNormalMap;
+uniform int hasFaceTexture;
 
 vec4 sampleByMat(int id, vec2 uv) {
     if (id == 0) return texture(tex0, uv);
@@ -45,8 +46,14 @@ void main()
     
     vec3 lightDir = normalize(pointLight - fragPosition.xyz);
     float intensity = max(0, dot(normal, lightDir)) + ambientLight;
-    vec4 baseColor = (useMatId == 1) ? sampleByMat(vMatId % 7, fragTexCoords)
+    
+    // Sample base texture
+    // When useMatId==1 (material texturing), vMatId directly corresponds to texture slot
+    // Material 0 (Clean) -> tex0, Material 1 (Rocket) -> tex1, etc.
+    // Face textures are already loaded into the correct slot (tex3 for Screen material)
+    vec4 baseColor = (useMatId == 1) ? sampleByMat(vMatId, fragTexCoords)
                                      : texture(tex0, fragTexCoords);
+    
     fragColor = baseColor * intensity;
 }
 
@@ -67,11 +74,29 @@ out vec4 fragColor;
 
 uniform sampler2D tex0;
 uniform sampler2D tex1;
+uniform sampler2D tex2;
+uniform sampler2D tex3;
+uniform sampler2D tex4;
+uniform sampler2D tex5;
+uniform sampler2D tex6;
 uniform vec3 pointLight;
 uniform float ambientLight;
 uniform float time;
 uniform float value;
+uniform int useMatId;
 uniform int hasNormalMap;
+uniform int hasFaceTexture;
+
+vec4 sampleByMat(int id, vec2 uv) {
+    if (id == 0) return texture(tex0, uv);
+    else if (id == 1) return texture(tex1, uv);
+    else if (id == 2) return texture(tex2, uv);
+    else if (id == 3) return texture(tex3, uv);
+    else if (id == 4) return texture(tex4, uv);
+    else if (id == 5) return texture(tex5, uv);
+    else if (id == 6) return texture(tex6, uv);
+    else return texture(tex0, uv);
+}
 
 void main()
 {
@@ -86,7 +111,8 @@ void main()
     vec3 lightDir = normalize(pointLight - fragPosition.xyz);
     float intensity = max(0, dot(normal, lightDir)) + ambientLight;
     
-    vec3 baseColor = texture(tex0, fragTexCoords).rgb * intensity;
+    vec3 baseColor = (useMatId == 1) ? sampleByMat(vMatId, fragTexCoords).rgb * intensity
+                                     : texture(tex0, fragTexCoords).rgb * intensity;
     
     float scanline = sin(fragTexCoords.y * 200.0 + time * 5.0) * 0.5 + 0.5;
     scanline = pow(scanline, 3.0);
@@ -113,15 +139,34 @@ in vec3 fragNormal;
 in vec4 fragPosition;
 in vec3 fragTangent;
 in vec3 fragBitangent;
+flat in int vMatId;
 
 out vec4 fragColor;
 
 uniform sampler2D tex0;
 uniform sampler2D tex1;
+uniform sampler2D tex2;
+uniform sampler2D tex3;
+uniform sampler2D tex4;
+uniform sampler2D tex5;
+uniform sampler2D tex6;
 uniform vec3 pointLight;
 uniform float ambientLight;
 uniform float value;
+uniform int useMatId;
 uniform int hasNormalMap;
+uniform int hasFaceTexture;
+
+vec4 sampleByMat(int id, vec2 uv) {
+    if (id == 0) return texture(tex0, uv);
+    else if (id == 1) return texture(tex1, uv);
+    else if (id == 2) return texture(tex2, uv);
+    else if (id == 3) return texture(tex3, uv);
+    else if (id == 4) return texture(tex4, uv);
+    else if (id == 5) return texture(tex5, uv);
+    else if (id == 6) return texture(tex6, uv);
+    else return texture(tex0, uv);
+}
 
 void main()
 {
@@ -141,8 +186,8 @@ void main()
     vec3 lightDir = normalize(pointLight - fragPosition.xyz);
     float intensity = max(0, dot(normal, lightDir)) + ambientLight;
     
-    vec4 texColor = texture(tex0, pixelatedCoords);
-    
+    vec4 texColor = (useMatId == 1) ? sampleByMat(vMatId, pixelatedCoords)
+                                    : texture(tex0, pixelatedCoords);
     fragColor = texColor * intensity;
 }
 '''
@@ -156,15 +201,18 @@ in vec3 fragNormal;
 in vec4 fragPosition;
 in vec3 fragTangent;
 in vec3 fragBitangent;
+flat in int vMatId;
 
 out vec4 fragColor;
 
 uniform sampler2D tex0;
 uniform sampler2D tex1;
+uniform sampler2D tex2;
 uniform vec3 pointLight;
 uniform float ambientLight;
 uniform float time;
 uniform int hasNormalMap;
+uniform int hasFaceTexture;
 
 void main()
 {
@@ -179,6 +227,7 @@ void main()
     vec3 lightDir = normalize(pointLight - fragPosition.xyz);
     float intensity = max(0, dot(normal, lightDir)) + ambientLight;
     
+    vec3 baseColor = texture(tex0, fragTexCoords).rgb;
     float heat = intensity + sin(time + fragPosition.y) * 0.2;
     
     vec3 coldColor = vec3(0.0, 0.0, 0.5);
@@ -208,16 +257,19 @@ in vec3 fragNormal;
 in vec4 fragPosition;
 in vec3 fragTangent;
 in vec3 fragBitangent;
+flat in int vMatId;
 
 out vec4 fragColor;
 
 uniform sampler2D tex0;
 uniform sampler2D tex1;
+uniform sampler2D tex2;
 uniform vec3 pointLight;
 uniform float ambientLight;
 uniform float time;
 uniform float value;
 uniform int hasNormalMap;
+uniform int hasFaceTexture;
 
 void main()
 {
@@ -240,7 +292,8 @@ void main()
     float g = texture(tex0, fragTexCoords).g;
     float b = texture(tex0, fragTexCoords - offset).b;
     
-    vec3 color = vec3(r, g, b) * intensity;
+    vec3 color = vec3(r, g, b);
+    color *= intensity;
     
     fragColor = vec4(color, 1.0);
 }
@@ -262,10 +315,12 @@ out vec4 fragColor;
 
 uniform sampler2D tex0;
 uniform sampler2D tex1;
+uniform sampler2D tex2;
 uniform vec3 pointLight;
 uniform float ambientLight;
 uniform float time;
 uniform int hasNormalMap;
+uniform int hasFaceTexture;
 
 void main()
 {
@@ -309,10 +364,12 @@ out vec4 fragColor;
 
 uniform sampler2D tex0;
 uniform sampler2D tex1;
+uniform sampler2D tex2;
 uniform vec3 pointLight;
 uniform float ambientLight;
 uniform float time;
 uniform int hasNormalMap;
+uniform int hasFaceTexture;
 
 void main()
 {
