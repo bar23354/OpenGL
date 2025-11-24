@@ -19,10 +19,12 @@ height = 540
 deltaTime = 0.0
 
 musicMenuExpanded = False
-musicMenuRect = pygame.Rect(10, 10, 200, 40)
-pauseButtonRect = pygame.Rect(20, 60, 180, 30)
-volumeUpRect = pygame.Rect(20, 100, 85, 30)
-volumeDownRect = pygame.Rect(115, 100, 85, 30)
+musicMenuRect = pygame.Rect(10, 10, 280, 60)
+pauseButtonRect = pygame.Rect(20, 80, 260, 45)
+volumeUpRect = pygame.Rect(20, 135, 125, 45)
+volumeDownRect = pygame.Rect(155, 135, 125, 45)
+volumeDisplayRect = pygame.Rect(20, 190, 260, 40)
+titleRect = pygame.Rect(20, 240, 260, 35)
 musicPaused = False
 musicVolume = 0.3
 
@@ -217,9 +219,9 @@ for i, (vShader, fShader, name) in enumerate(shaderSourceList):
 			compileShader(fShader, GL_FRAGMENT_SHADER)
 		)
 		compiledShaders.append(shader)
-		print(f"  ✓ {i+1}. {name}")
+		print(f"  ok {i+1}. {name}")
 	except Exception as e:
-		print(f"  ✗ {i+1}. {name} - Error: {e}")
+		print(f"  x {i+1}. {name} - Error: {e}")
 		compiledShaders.append(None)
 print("="*60 + "\n")
 
@@ -280,133 +282,55 @@ def focusOnModel(modelIndex):
 def draw_music_menu():
     global musicMenuExpanded, musicPaused, musicVolume
     
-    # Switch to 2D rendering
-    glMatrixMode(GL_PROJECTION)
-    glPushMatrix()
-    glLoadIdentity()
-    glOrtho(0, width, height, 0, -1, 1)
-    glMatrixMode(GL_MODELVIEW)
-    glPushMatrix()
-    glLoadIdentity()
+    overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 0))
     
-    glDisable(GL_DEPTH_TEST)
-    glDisable(GL_LIGHTING)
-    glDisable(GL_TEXTURE_2D)
-    
-    # Main menu button
-    glColor4f(0.2, 0.2, 0.2, 0.8)
-    glBegin(GL_QUADS)
-    glVertex2f(musicMenuRect.x, musicMenuRect.y)
-    glVertex2f(musicMenuRect.x + musicMenuRect.width, musicMenuRect.y)
-    glVertex2f(musicMenuRect.x + musicMenuRect.width, musicMenuRect.y + musicMenuRect.height)
-    glVertex2f(musicMenuRect.x, musicMenuRect.y + musicMenuRect.height)
-    glEnd()
-    
-    # Border
-    glColor4f(0.0, 1.0, 0.0, 1.0)
-    glLineWidth(2)
-    glBegin(GL_LINE_LOOP)
-    glVertex2f(musicMenuRect.x, musicMenuRect.y)
-    glVertex2f(musicMenuRect.x + musicMenuRect.width, musicMenuRect.y)
-    glVertex2f(musicMenuRect.x + musicMenuRect.width, musicMenuRect.y + musicMenuRect.height)
-    glVertex2f(musicMenuRect.x, musicMenuRect.y + musicMenuRect.height)
-    glEnd()
-    
-    # Expanded menu
-    if musicMenuExpanded:
-        # Pause button
-        glColor4f(0.3, 0.3, 0.3, 0.8)
-        glBegin(GL_QUADS)
-        glVertex2f(pauseButtonRect.x, pauseButtonRect.y)
-        glVertex2f(pauseButtonRect.x + pauseButtonRect.width, pauseButtonRect.y)
-        glVertex2f(pauseButtonRect.x + pauseButtonRect.width, pauseButtonRect.y + pauseButtonRect.height)
-        glVertex2f(pauseButtonRect.x, pauseButtonRect.y + pauseButtonRect.height)
-        glEnd()
-        
-        glColor4f(0.0, 1.0, 0.0, 1.0)
-        glBegin(GL_LINE_LOOP)
-        glVertex2f(pauseButtonRect.x, pauseButtonRect.y)
-        glVertex2f(pauseButtonRect.x + pauseButtonRect.width, pauseButtonRect.y)
-        glVertex2f(pauseButtonRect.x + pauseButtonRect.width, pauseButtonRect.y + pauseButtonRect.height)
-        glVertex2f(pauseButtonRect.x, pauseButtonRect.y + pauseButtonRect.height)
-        glEnd()
-        
-        # Volume Up button
-        glColor4f(0.3, 0.3, 0.3, 0.8)
-        glBegin(GL_QUADS)
-        glVertex2f(volumeUpRect.x, volumeUpRect.y)
-        glVertex2f(volumeUpRect.x + volumeUpRect.width, volumeUpRect.y)
-        glVertex2f(volumeUpRect.x + volumeUpRect.width, volumeUpRect.y + volumeUpRect.height)
-        glVertex2f(volumeUpRect.x, volumeUpRect.y + volumeUpRect.height)
-        glEnd()
-        
-        glColor4f(0.0, 1.0, 0.0, 1.0)
-        glBegin(GL_LINE_LOOP)
-        glVertex2f(volumeUpRect.x, volumeUpRect.y)
-        glVertex2f(volumeUpRect.x + volumeUpRect.width, volumeUpRect.y)
-        glVertex2f(volumeUpRect.x + volumeUpRect.width, volumeUpRect.y + volumeUpRect.height)
-        glVertex2f(volumeUpRect.x, volumeUpRect.y + volumeUpRect.height)
-        glEnd()
-        
-        # Volume Down button
-        glColor4f(0.3, 0.3, 0.3, 0.8)
-        glBegin(GL_QUADS)
-        glVertex2f(volumeDownRect.x, volumeDownRect.y)
-        glVertex2f(volumeDownRect.x + volumeDownRect.width, volumeDownRect.y)
-        glVertex2f(volumeDownRect.x + volumeDownRect.width, volumeDownRect.y + volumeDownRect.height)
-        glVertex2f(volumeDownRect.x, volumeDownRect.y + volumeDownRect.height)
-        glEnd()
-        
-        glColor4f(0.0, 1.0, 0.0, 1.0)
-        glBegin(GL_LINE_LOOP)
-        glVertex2f(volumeDownRect.x, volumeDownRect.y)
-        glVertex2f(volumeDownRect.x + volumeDownRect.width, volumeDownRect.y)
-        glVertex2f(volumeDownRect.x + volumeDownRect.width, volumeDownRect.y + volumeDownRect.height)
-        glVertex2f(volumeDownRect.x, volumeDownRect.y + volumeDownRect.height)
-        glEnd()
-    
-    # Restore 3D rendering
-    glEnable(GL_DEPTH_TEST)
-    glPopMatrix()
-    glMatrixMode(GL_PROJECTION)
-    glPopMatrix()
-    glMatrixMode(GL_MODELVIEW)
-    
-    # Draw text using pygame
-    pygame.font.init()
-    font = pygame.font.Font(None, 24)
-    
-    # Main button text
-    text = font.render("MUSICA", True, (0, 255, 0))
-    text_data = pygame.image.tostring(text, "RGBA", True)
-    glWindowPos2d(int(musicMenuRect.x + 60), int(height - musicMenuRect.y - 27))
-    glDrawPixels(text.get_width(), text.get_height(), GL_RGBA, GL_UNSIGNED_BYTE, text_data)
+    font_title = pygame.font.Font(None, 38)
+    font_button = pygame.font.Font(None, 28)
+    font_small = pygame.font.Font(None, 22)
     
     if musicMenuExpanded:
-        # Pause button text
-        pause_text = "REANUDAR" if musicPaused else "PAUSAR"
-        text = font.render(pause_text, True, (0, 255, 0))
-        text_data = pygame.image.tostring(text, "RGBA", True)
-        glWindowPos2d(int(pauseButtonRect.x + 45), int(height - pauseButtonRect.y - 22))
-        glDrawPixels(text.get_width(), text.get_height(), GL_RGBA, GL_UNSIGNED_BYTE, text_data)
+        pygame.draw.rect(overlay, (38, 30, 20, 250), (10, 10, 300, 285))
+        pygame.draw.rect(overlay, (217, 166, 38), (10, 10, 300, 285), 4)
         
-        # Volume buttons text
-        text = font.render("VOL +", True, (0, 255, 0))
-        text_data = pygame.image.tostring(text, "RGBA", True)
-        glWindowPos2d(int(volumeUpRect.x + 15), int(height - volumeUpRect.y - 22))
-        glDrawPixels(text.get_width(), text.get_height(), GL_RGBA, GL_UNSIGNED_BYTE, text_data)
+        pygame.draw.rect(overlay, (217, 166, 38, 250), musicMenuRect)
+        pygame.draw.rect(overlay, (51, 38, 25), musicMenuRect, 3)
+        text = font_title.render("AUDIO", True, (40, 30, 20))
+        overlay.blit(text, (musicMenuRect.centerx - text.get_width()//2, musicMenuRect.centery - text.get_height()//2))
         
-        text = font.render("VOL -", True, (0, 255, 0))
-        text_data = pygame.image.tostring(text, "RGBA", True)
-        glWindowPos2d(int(volumeDownRect.x + 15), int(height - volumeDownRect.y - 22))
-        glDrawPixels(text.get_width(), text.get_height(), GL_RGBA, GL_UNSIGNED_BYTE, text_data)
+        pygame.draw.rect(overlay, (191, 140, 25, 242), pauseButtonRect)
+        pygame.draw.rect(overlay, (51, 38, 25), pauseButtonRect, 2)
+        pause_text = "> PLAY" if musicPaused else "|| PAUSA"
+        text = font_button.render(pause_text, True, (40, 30, 20))
+        overlay.blit(text, (pauseButtonRect.centerx - text.get_width()//2, pauseButtonRect.centery - text.get_height()//2))
         
-        # Volume percentage
-        vol_text = f"{int(musicVolume * 100)}%"
-        text = font.render(vol_text, True, (0, 255, 0))
-        text_data = pygame.image.tostring(text, "RGBA", True)
-        glWindowPos2d(int(musicMenuRect.x + 80), int(height - volumeDownRect.y - 55))
-        glDrawPixels(text.get_width(), text.get_height(), GL_RGBA, GL_UNSIGNED_BYTE, text_data)
+        pygame.draw.rect(overlay, (166, 128, 30, 242), volumeUpRect)
+        pygame.draw.rect(overlay, (51, 38, 25), volumeUpRect, 2)
+        text = font_button.render("+", True, (40, 30, 20))
+        overlay.blit(text, (volumeUpRect.centerx - text.get_width()//2, volumeUpRect.centery - text.get_height()//2))
+        
+        pygame.draw.rect(overlay, (166, 128, 30, 242), volumeDownRect)
+        pygame.draw.rect(overlay, (51, 38, 25), volumeDownRect, 2)
+        text = font_button.render("-", True, (40, 30, 20))
+        overlay.blit(text, (volumeDownRect.centerx - text.get_width()//2, volumeDownRect.centery - text.get_height()//2))
+        
+        pygame.draw.rect(overlay, (140, 107, 25, 230), volumeDisplayRect)
+        pygame.draw.rect(overlay, (51, 38, 25), volumeDisplayRect, 2)
+        vol_text = f"VOL: {int(musicVolume * 100)}%"
+        text = font_button.render(vol_text, True, (220, 200, 160))
+        overlay.blit(text, (volumeDisplayRect.centerx - text.get_width()//2, volumeDisplayRect.centery - text.get_height()//2))
+        
+        pygame.draw.rect(overlay, (30, 25, 15, 217), titleRect)
+        pygame.draw.rect(overlay, (217, 166, 38, 153), titleRect, 1)
+        text = font_small.render("Big Iron", True, (220, 200, 160))
+        overlay.blit(text, (titleRect.centerx - text.get_width()//2, titleRect.centery - text.get_height()//2))
+    else:
+        pygame.draw.rect(overlay, (217, 166, 38, 250), musicMenuRect)
+        pygame.draw.rect(overlay, (51, 38, 25), musicMenuRect, 3)
+        text = font_button.render("AUDIO", True, (40, 30, 20))
+        overlay.blit(text, (musicMenuRect.centerx - text.get_width()//2, musicMenuRect.centery - text.get_height()//2))
+    
+    screen.blit(overlay, (0, 0))
 
 updateCameraPosition()
 
@@ -425,12 +349,13 @@ while isRunning:
 			isRunning = False
 
 		elif event.type == pygame.MOUSEBUTTONDOWN:
-			# Check music menu clicks
-			if event.button == 1:  # Left click
+			if event.button == 1:
 				mouse_pos = pygame.mouse.get_pos()
 				
+				menu_clicked = False
 				if musicMenuRect.collidepoint(mouse_pos):
 					musicMenuExpanded = not musicMenuExpanded
+					menu_clicked = True
 				elif musicMenuExpanded:
 					if pauseButtonRect.collidepoint(mouse_pos):
 						if musicPaused:
@@ -441,14 +366,28 @@ while isRunning:
 							pygame.mixer.music.pause()
 							musicPaused = True
 							print("Musica pausada")
+						menu_clicked = True
 					elif volumeUpRect.collidepoint(mouse_pos):
 						musicVolume = min(1.0, musicVolume + 0.1)
 						pygame.mixer.music.set_volume(musicVolume)
 						print(f"Volumen: {int(musicVolume * 100)}%")
+						menu_clicked = True
 					elif volumeDownRect.collidepoint(mouse_pos):
 						musicVolume = max(0.0, musicVolume - 0.1)
 						pygame.mixer.music.set_volume(musicVolume)
 						print(f"Volumen: {int(musicVolume * 100)}%")
+						menu_clicked = True
+				
+				if not menu_clicked:
+					mousePressed = True
+					lastMouseX, lastMouseY = event.pos
+			
+			elif event.button == 4:
+				cameraDistance = max(MIN_DISTANCE, cameraDistance - 1.0)
+				updateCameraPosition()
+			elif event.button == 5:
+				cameraDistance = min(MAX_DISTANCE, cameraDistance + 1.0)
+				updateCameraPosition()
 
 		elif event.type == pygame.KEYDOWN:
 			if event.key == pygame.K_f:
@@ -574,7 +513,6 @@ while isRunning:
 					print(f"X Shader removido de {model_name}")
 			
 			elif event.key == pygame.K_p:
-				# Pausar/Reanudar música
 				if pygame.mixer.music.get_busy():
 					pygame.mixer.music.pause()
 					print("\nMusica pausada")
@@ -583,30 +521,16 @@ while isRunning:
 					print("\nMusica reanudada")
 			
 			elif event.key == pygame.K_PLUS or event.key == pygame.K_EQUALS:
-				# Subir volumen
 				current_volume = pygame.mixer.music.get_volume()
 				new_volume = min(1.0, current_volume + 0.1)
 				pygame.mixer.music.set_volume(new_volume)
 				print(f"\nVolumen: {int(new_volume * 100)}%")
 			
 			elif event.key == pygame.K_MINUS:
-				# Bajar volumen
 				current_volume = pygame.mixer.music.get_volume()
 				new_volume = max(0.0, current_volume - 0.1)
 				pygame.mixer.music.set_volume(new_volume)
 				print(f"\nVolumen: {int(new_volume * 100)}%")
-
-
-		elif event.type == pygame.MOUSEBUTTONDOWN:
-			if event.button == 1:
-				mousePressed = True
-				lastMouseX, lastMouseY = event.pos
-			elif event.button == 4:
-				cameraDistance = max(MIN_DISTANCE, cameraDistance - 1.0)
-				updateCameraPosition()
-			elif event.button == 5:
-				cameraDistance = min(MAX_DISTANCE, cameraDistance + 1.0)
-				updateCameraPosition()
 
 		elif event.type == pygame.MOUSEBUTTONUP:
 			if event.button == 1:
@@ -744,7 +668,6 @@ while isRunning:
 	else:
 		rend.Render()
 	
-	# Draw 2D music menu on top
 	draw_music_menu()
 	
 	pygame.display.flip()
