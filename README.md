@@ -51,19 +51,26 @@
 - `M`: Modo aleatorio - asigna shader diferente a cada modelo automáticamente
 - `F`: Toggle Filled/Wireframe Mode
 
+#### **MÚSICA:**
+- `P`: Pausar/Reanudar música de fondo
+- `+` o `=`: Subir volumen
+- `-`: Bajar volumen
+
 ---
 
 ### Flujo
 
 1. **Vista Global**: Al iniciar, la cámara muestra todo el diorama en una vista panorámica
-2. **Selección de Modelo**: Presiona `TAB` para navegar entre modelos individuales
+2. **Música de Fondo**: Se reproduce automáticamente "Big Iron" de Marty Robbins en loop
+3. **Selección de Modelo**: Presiona `TAB` para navegar entre modelos individuales
    - La cámara se enfoca automáticamente en cada modelo
    - El nombre del modelo se muestra en consola
-3. **Aplicar Shaders**: Con un modelo seleccionado, presiona `1-9` para asignarle un shader específico
-4. **Persistencia**: Cada modelo mantiene su shader asignado al cambiar a otro
-5. **Modo Aleatorio**: Presiona `M` para que cada modelo obtenga un shader diferente automáticamente
-6. **Control de Luz**: Usa `W/A/S/D/R/T` para mover la luz y ver diferentes efectos de iluminación
-7. **Vista Global**: Presiona `HOME` en cualquier momento para volver a la vista completa del diorama
+4. **Aplicar Shaders**: Con un modelo seleccionado, presiona `1-9` para asignarle un shader específico
+5. **Persistencia**: Cada modelo mantiene su shader asignado al cambiar a otro
+6. **Modo Aleatorio**: Presiona `M` para que cada modelo obtenga un shader diferente automáticamente
+7. **Control de Luz**: Usa `W/A/S/D/R/T` para mover la luz y ver diferentes efectos de iluminación
+8. **Control de Música**: Usa `P` para pausar/reanudar y `+/-` para ajustar volumen
+9. **Vista Global**: Presiona `HOME` en cualquier momento para volver a la vista completa del diorama
 
 ---
 
